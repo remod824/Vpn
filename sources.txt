@@ -1,0 +1,6 @@
+# Public subscription feeds; one URL per line
+https://raw.githubusercontent.com/3000S-HTTP/sNSub/main/output/configs_base64.txt
+https://raw.githubusercontent.com/ninjastrikers/Nexus-nodes/main/configs/all.txt
+https://raw.githubusercontent.com/Alirewa/v2ray-configs/main/config.txt
+https://raw.githubusercontent.com/Danialsamadi/v2go/main/AllConfigsSub.txt
+https://raw.githubusercontent.com/rtwo2/FastNodes/main/sub/top.txt
