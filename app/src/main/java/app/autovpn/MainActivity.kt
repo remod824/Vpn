@@ -1,11 +1,18 @@
 package app.autovpn
 
+import android.app.Activity
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.VpnService
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -38,6 +45,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -50,7 +58,15 @@ private val Muted = Color(0xFF8995A9)
 
 class MainActivity : ComponentActivity() {
     private lateinit var connectivity: ConnectivityManager
+    private lateinit var vpnPermissionLauncher: ActivityResultLauncher<Intent>
+    private var pendingConfig: String? = null
+    private var vpnStatus by mutableStateOf("Готов к подключению")
     private var networkLabel by mutableStateOf("Определяем сеть…")
+    private val vpnStatusReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            vpnStatus = intent.getStringExtra(AutoVpnVpnService.EXTRA_STATUS) ?: vpnStatus
+        }
+    }
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
             runOnUiThread { networkLabel = networkName(caps) }
@@ -64,15 +80,56 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         connectivity = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        vpnPermissionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                pendingConfig?.let { AutoVpnVpnService.start(this, it) }
+            } else {
+                vpnStatus = "Разрешение VPN не выдано"
+            }
+            pendingConfig = null
+        }
+        ContextCompat.registerReceiver(
+            this,
+            vpnStatusReceiver,
+            IntentFilter(AutoVpnVpnService.ACTION_STATUS),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
         networkLabel = connectivity.getNetworkCapabilities(connectivity.activeNetwork)?.let(::networkName) ?: "Нет сети"
         connectivity.registerDefaultNetworkCallback(networkCallback)
         RefreshServersWorker.schedule(this)
-        setContent { AutoVpnApp(networkLabel) }
+        setContent { AutoVpnApp(networkLabel, vpnStatus, ::toggleVpn) }
     }
 
     override fun onDestroy() {
         runCatching { connectivity.unregisterNetworkCallback(networkCallback) }
+        runCatching { unregisterReceiver(vpnStatusReceiver) }
         super.onDestroy()
+    }
+
+    private fun toggleVpn() {
+        if (vpnStatus == "VPN подключён" || vpnStatus.startsWith("Запуск VPN")) {
+            AutoVpnVpnService.stop(this)
+            return
+        }
+        val nodes = ServerCatalog.load(this)
+        val node = ServerCatalog.selected(this)
+            ?: nodes.filter { it.isWorking }.minByOrNull { it.pingMs }
+        if (node == null) {
+            vpnStatus = "Нет проверенного сервера. Обнови список серверов."
+            return
+        }
+        val config = runCatching { SingBoxConfigBuilder.build(node) }.getOrElse {
+            vpnStatus = "Не удалось собрать конфигурацию: ${it.message}"
+            return
+        }
+        val permission = VpnService.prepare(this)
+        if (permission != null) {
+            pendingConfig = config
+            vpnPermissionLauncher.launch(permission)
+        } else {
+            AutoVpnVpnService.start(this, config)
+        }
+        vpnStatus = "Подключение к ${node.name}…"
     }
 
     private fun networkName(caps: NetworkCapabilities): String = when {
@@ -83,7 +140,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun AutoVpnApp(networkLabel: String) {
+private fun AutoVpnApp(networkLabel: String, vpnStatus: String, onToggleVpn: () -> Unit) {
     val context = LocalContext.current
     var showServers by remember { mutableStateOf(false) }
     var selectedNode by remember { mutableStateOf(ServerCatalog.selected(context)) }
@@ -110,6 +167,8 @@ private fun AutoVpnApp(networkLabel: String) {
             AutoVpnHome(
                 networkLabel = networkLabel,
                 selectedNode = selectedNode,
+                vpnStatus = vpnStatus,
+                onToggleVpn = onToggleVpn,
                 onOpenServers = { showServers = true }
             )
         }
@@ -120,11 +179,12 @@ private fun AutoVpnApp(networkLabel: String) {
 private fun AutoVpnHome(
     networkLabel: String,
     selectedNode: ServerNode?,
+    vpnStatus: String,
+    onToggleVpn: () -> Unit,
     onOpenServers: () -> Unit
 ) {
     var mode by remember { mutableStateOf("Автоматически") }
     var showSettings by remember { mutableStateOf(false) }
-    var message by remember { mutableStateOf("Готов к подключению") }
     val context = LocalContext.current
     val serverCount = remember { mutableIntStateOf(ServerCatalog.load(context).size) }
 
@@ -163,7 +223,7 @@ private fun AutoVpnHome(
         Spacer(Modifier.height(29.dp))
         Text("ВАШЕ СОЕДИНЕНИЕ", color = Muted, fontSize = 11.sp, letterSpacing = 2.sp)
         Spacer(Modifier.height(13.dp))
-        Text(message, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
+        Text(vpnStatus, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(7.dp))
         Text(
             if (selectedNode == null) {
@@ -191,13 +251,13 @@ private fun AutoVpnHome(
                     ),
                     CircleShape
                 )
-                .clickable { message = "VPN-ядро ещё не подключено" },
+                .clickable(onClick = onToggleVpn),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.Default.Bolt, null, tint = Mint, modifier = Modifier.size(45.dp))
                 Spacer(Modifier.height(8.dp))
-                Text("ВКЛЮЧИТЬ", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+                Text(if (vpnStatus == "VPN подключён") "ОТКЛЮЧИТЬ" else "ВКЛЮЧИТЬ", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
                 Spacer(Modifier.height(5.dp))
                 Text("VPN", color = Mint, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
             }
