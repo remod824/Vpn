@@ -4,9 +4,10 @@ AutoVPN is an Android VPN client project built with Kotlin, Jetpack Compose and 
 
 ## Current implementation
 
-The current 0.2.0 development build includes:
+The current 0.3.0 development build includes:
 
-- A minimal dark home screen with a large central connect/disconnect button.
+- A redesigned responsive dark home screen with a pulsing animated connect/disconnect button, animated status/icon transitions, compact network/profile tiles and expandable settings.
+- Scroll-safe layouts, safe-area insets, weighted rows, and truncation for long server names so controls remain inside narrow screens.
 - Android `VpnService` lifecycle, system VPN permission flow and foreground notification.
 - libbox 1.14.4 engine dependency and configuration generation for VLESS, VMess, Trojan, Shadowsocks, Hysteria2, TUIC, AnyTLS and SOCKS links.
 - Subscription import from `sources.txt`, Base64/plain-text decoding, deduplication and a local cache capped at 1,000 nodes.
