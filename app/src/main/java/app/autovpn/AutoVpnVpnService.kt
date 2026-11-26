@@ -334,10 +334,10 @@ class AutoVpnVpnService : VpnService(), PlatformInterface, CommandServerHandler 
                         .iterator()
                 )
                 type = when {
-                    caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> LibboxNetworkInterface.InterfaceTypeWIFI
-                    caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> LibboxNetworkInterface.InterfaceTypeCellular
-                    caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> LibboxNetworkInterface.InterfaceTypeEthernet
-                    else -> LibboxNetworkInterface.InterfaceTypeOther
+                    caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> Libbox.InterfaceTypeWIFI
+                    caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> Libbox.InterfaceTypeCellular
+                    caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> Libbox.InterfaceTypeEthernet
+                    else -> Libbox.InterfaceTypeOther
                 }
                 mtu = runCatching { javaInterface.mtu }.getOrDefault(0)
                 addresses = StringArray(
