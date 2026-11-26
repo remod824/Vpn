@@ -27,6 +27,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -61,6 +62,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
@@ -252,13 +254,6 @@ private fun AutoVpnHome(
         "Всегда спец. профиль" -> "Спец. профиль"
         else -> if (networkLabel == "Wi-Fi") "Обычный VPN" else "Спец. профиль"
     }
-    val statusColor = when {
-        connected -> Mint
-        busy -> Color(0xFFFFC56D)
-        vpnStatus.startsWith("Ошибка") -> Color(0xFFFF7C86)
-        else -> Color.White
-    }
-
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
@@ -274,6 +269,7 @@ private fun AutoVpnHome(
                 .fillMaxWidth()
                 .heightIn(min = maxHeight)
                 .verticalScroll(rememberScrollState())
+                .statusBarsPadding()
                 .navigationBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 14.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -592,7 +588,7 @@ private fun ServerPickerScreen(
     }
 
     Column(
-        Modifier.fillMaxSize().background(Bg).padding(horizontal = 18.dp, vertical = 14.dp)
+        Modifier.fillMaxSize().background(Bg).statusBarsPadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 10.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
@@ -721,13 +717,14 @@ private fun ServerRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            Text(node.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            Text(node.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(4.dp))
             Text(
                 "${node.country} • ${node.protocol} • ${node.host}:${node.port}",
                 color = Muted,
                 fontSize = 10.sp,
-                maxLines = 2
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Spacer(Modifier.height(5.dp))
             val latency = when {
@@ -749,6 +746,6 @@ private fun ServerRow(
                 tint = if (node.isFavorite) Mint else Muted
             )
         }
-        Text("Выбрать", color = Mint, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        TextButton(onClick = onSelect, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)) { Text("Выбрать", color = Mint, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1) }
     }
 }
