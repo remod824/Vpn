@@ -1,0 +1,4 @@
+Configs: 12000
+Sources: 5
+Failed sources: 1
+https://raw.githubusercontent.com/rtwo2/FastNodes/main/sub/top.txt: HTTPError: HTTP Error 404: Not Found
