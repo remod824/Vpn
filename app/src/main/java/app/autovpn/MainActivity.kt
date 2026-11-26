@@ -416,7 +416,7 @@ private fun ServerPickerScreen(
         }
 
         if (visibleServers.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(
                     if (servers.isEmpty()) "Каталог пока пуст. Нажми обновить." else "По этому фильтру серверов нет.",
                     color = Muted,
