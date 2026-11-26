@@ -13,8 +13,6 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.content.getSystemService
 import androidx.core.content.ContextCompat
-import io.nekohasekai.libbox.AutoRedirectHandler
-import io.nekohasekai.libbox.AutoRedirectSession
 import io.nekohasekai.libbox.BridgeOptions
 import io.nekohasekai.libbox.BridgeSession
 import io.nekohasekai.libbox.CommandServer
@@ -316,10 +314,6 @@ class AutoVpnVpnService : VpnService(), PlatformInterface, CommandServerHandler 
     override fun usePlatformBridge(): Boolean = false
     override fun createBridge(options: BridgeOptions?): BridgeSession =
         throw UnsupportedOperationException("Bridge is unavailable")
-    override fun usePlatformAutoRedirect(): Boolean = false
-    override fun createAutoRedirect(options: ByteArray?, handler: AutoRedirectHandler?): AutoRedirectSession =
-        throw UnsupportedOperationException("Auto redirect is unavailable")
-
     override fun lookupUser(username: String?): PlatformUser = PlatformUser().apply {
         this.username = username.orEmpty()
         uid = android.os.Process.myUid()
