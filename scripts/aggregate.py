@@ -65,8 +65,8 @@ def main() -> None:
     (OUT / "happ.txt").write_text(encoded)
     (OUT / "raw.txt").write_text(raw)
     small_nodes = nodes[:HAPP_NODES]
-    small_raw = "\\n".join(small_nodes) + "\\n"
-    small_encoded = base64.b64encode(small_raw.encode()).decode() + "\\n"
+    small_raw = "\n".join(small_nodes) + "\n"
+    small_encoded = base64.b64encode(small_raw.encode()).decode() + "\n"
     (OUT / "happ-1000.txt").write_text(small_encoded)
     (OUT / "status.txt").write_text(
         f"Configs: {len(nodes)}\nSources: {len(urls)}\nFailed sources: {len(failures)}\n"
