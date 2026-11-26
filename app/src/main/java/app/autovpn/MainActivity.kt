@@ -194,6 +194,7 @@ private fun AutoVpnHome(
     onToggleVpn: (String) -> Unit,
     onOpenServers: () -> Unit
 ) {
+    val context = LocalContext.current
     val preferences = remember(context) {
         context.getSharedPreferences("autovpn_settings", Context.MODE_PRIVATE)
     }
@@ -201,7 +202,6 @@ private fun AutoVpnHome(
         mutableStateOf(preferences.getString("mode", "Автоматически") ?: "Автоматически")
     }
     var showSettings by remember { mutableStateOf(false) }
-    val context = LocalContext.current
     val serverCount = remember { mutableIntStateOf(ServerCatalog.load(context).size) }
 
     LaunchedEffect(Unit) {
