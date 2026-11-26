@@ -27,7 +27,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -322,7 +321,6 @@ private fun AutoVpnHome(
             Spacer(Modifier.height(10.dp))
             AnimatedContent(
                 targetState = vpnStatus,
-                transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
                 label = "vpn-status"
             ) { status ->
                 Text(
@@ -375,7 +373,6 @@ private fun AutoVpnHome(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     AnimatedContent(
                         targetState = connected,
-                        transitionSpec = { scaleIn(tween(180)) + fadeIn(tween(180)) togetherWith scaleOut(tween(120)) + fadeOut(tween(120)) },
                         label = "connect-icon"
                     ) { isConnected ->
                         Icon(
