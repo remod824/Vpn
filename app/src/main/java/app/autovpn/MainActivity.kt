@@ -14,6 +14,19 @@ import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,12 +35,17 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -39,6 +57,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -203,6 +222,23 @@ private fun AutoVpnHome(
     }
     var showSettings by remember { mutableStateOf(false) }
     val serverCount = remember { mutableIntStateOf(ServerCatalog.load(context).size) }
+    val connected = vpnStatus == "VPN подключён"
+    val busy = vpnStatus.startsWith("Подключение") || vpnStatus.startsWith("Запуск VPN")
+    val infinite = rememberInfiniteTransition(label = "connect-pulse")
+    val pulse by infinite.animateFloat(
+        initialValue = 1f,
+        targetValue = if (connected || busy) 1.018f else 1.035f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = if (busy) 650 else 1500),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "connect-scale"
+    )
+    val buttonScale by animateFloatAsState(
+        targetValue = if (connected) 1.015f else 1f,
+        animationSpec = tween(260),
+        label = "button-scale"
+    )
 
     LaunchedEffect(Unit) {
         if (serverCount.intValue == 0) {
@@ -213,119 +249,265 @@ private fun AutoVpnHome(
 
     val profile = when (mode) {
         "Всегда обычный VPN" -> "Обычный VPN"
-        "Всегда спец. профиль" -> "Специальный профиль"
-        else -> if (networkLabel == "Wi-Fi") "Обычный VPN" else "Специальный профиль"
+        "Всегда спец. профиль" -> "Спец. профиль"
+        else -> if (networkLabel == "Wi-Fi") "Обычный VPN" else "Спец. профиль"
+    }
+    val statusColor = when {
+        connected -> Mint
+        busy -> Color(0xFFFFC56D)
+        vpnStatus.startsWith("Ошибка") -> Color(0xFFFF7C86)
+        else -> Color.White
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().background(Bg).padding(horizontal = 22.dp, vertical = 20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                androidx.compose.ui.graphics.Brush.verticalGradient(
+                    listOf(Color(0xFF080D19), Color(0xFF0B1422), Color(0xFF080C16))
+                )
+            )
     ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        val buttonSize = minOf(maxWidth * .68f, maxHeight * .34f).coerceIn(154.dp, 248.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = maxHeight)
+                .verticalScroll(rememberScrollState())
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    Modifier
+                        .size(42.dp)
+                        .background(
+                            androidx.compose.ui.graphics.Brush.linearGradient(
+                                listOf(Color(0xFF2AD7A0).copy(alpha = .24f), Color(0xFF2A8EBD).copy(alpha = .12f))
+                            ),
+                            RoundedCornerShape(14.dp)
+                        )
+                        .border(1.dp, Mint.copy(alpha = .20f), RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Bolt, null, tint = Mint, modifier = Modifier.size(25.dp))
+                }
+                Spacer(Modifier.width(11.dp))
+                Column {
+                    Text("AutoVPN", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-.4).sp)
+                    Text("PRIVATE CONNECTION", color = Muted, fontSize = 8.sp, letterSpacing = 1.8.sp)
+                }
+                Spacer(Modifier.weight(1f))
+                Surface(
+                    color = Color(0xFF172333),
+                    shape = RoundedCornerShape(50),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A3B4D))
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(Modifier.size(6.dp).background(if (connected) Mint else Muted, CircleShape))
+                        Spacer(Modifier.width(6.dp))
+                        Text(if (connected) "ЗАЩИЩЕНО" else "НЕ ПОДКЛЮЧЕНО", color = if (connected) Mint else Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = .5.sp)
+                    }
+                }
+                IconButton(onClick = { showSettings = !showSettings }) {
+                    Icon(Icons.Default.Settings, contentDescription = "Настройки", tint = Muted)
+                }
+            }
+
+            Spacer(Modifier.height(26.dp))
+            Text("ВАШЕ СОЕДИНЕНИЕ", color = Muted, fontSize = 10.sp, letterSpacing = 2.1.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(10.dp))
+            AnimatedContent(
+                targetState = vpnStatus,
+                transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
+                label = "vpn-status"
+            ) { status ->
+                Text(
+                    status,
+                    color = when {
+                        status == "VPN подключён" -> Mint
+                        status.startsWith("Ошибка") -> Color(0xFFFF7C86)
+                        status.startsWith("Подключение") || status.startsWith("Запуск") -> Color(0xFFFFC56D)
+                        else -> Color.White
+                    },
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                if (selectedNode == null) "Подберём доступный сервер автоматически" else "Выбран сервер: ${selectedNode.name}",
+                color = Muted,
+                fontSize = 11.sp,
+                textAlign = TextAlign.Center,
+                lineHeight = 16.sp,
+                modifier = Modifier.padding(horizontal = 12.dp)
+            )
+
+            Spacer(Modifier.height(20.dp))
             Box(
-                Modifier.size(38.dp).background(Mint.copy(alpha = .13f), RoundedCornerShape(12.dp)),
+                modifier = Modifier
+                    .size(buttonSize)
+                    .graphicsLayer {
+                        scaleX = pulse * buttonScale
+                        scaleY = pulse * buttonScale
+                    }
+                    .shadow(28.dp, CircleShape, ambientColor = Mint.copy(alpha = .22f), spotColor = Mint.copy(alpha = .30f))
+                    .background(
+                        androidx.compose.ui.graphics.Brush.radialGradient(
+                            listOf(Color(0xFF24574D), Color(0xFF173A3A), Color(0xFF101D2D))
+                        ),
+                        CircleShape
+                    )
+                    .border(1.5.dp, Mint.copy(alpha = if (connected) .85f else .55f), CircleShape)
+                    .padding(10.dp)
+                    .border(1.dp, Color.White.copy(alpha = .10f), CircleShape)
+                    .padding(8.dp)
+                    .background(Color(0xFF0E1A28).copy(alpha = .70f), CircleShape)
+                    .clickable(enabled = !busy) { onToggleVpn(mode) },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Bolt, null, tint = Mint, modifier = Modifier.size(25.dp))
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    AnimatedContent(
+                        targetState = connected,
+                        transitionSpec = { scaleIn(tween(180)) + fadeIn(tween(180)) togetherWith scaleOut(tween(120)) + fadeOut(tween(120)) },
+                        label = "connect-icon"
+                    ) { isConnected ->
+                        Icon(
+                            if (isConnected) Icons.Default.CheckCircle else Icons.Default.Bolt,
+                            contentDescription = null,
+                            tint = Mint,
+                            modifier = Modifier.size(buttonSize * .19f)
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    AnimatedContent(
+                        targetState = when {
+                            busy -> "ПОДКЛЮЧАЕМ"
+                            connected -> "ОТКЛЮЧИТЬ"
+                            else -> "ВКЛЮЧИТЬ"
+                        },
+                        label = "connect-label"
+                    ) { label ->
+                        Text(label, color = Color.White, fontSize = if (buttonSize < 180.dp) 15.sp else 18.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .8.sp, textAlign = TextAlign.Center)
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(if (connected) "ЗАЩИЩЁННЫЙ КАНАЛ" else "ОДНО КАСАНИЕ", color = Mint, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                }
             }
-            Spacer(Modifier.width(10.dp))
-            Text("AutoVPN", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.weight(1f))
-            IconButton(onClick = { showSettings = !showSettings }) {
-                Icon(Icons.Default.Settings, contentDescription = "Настройки", tint = Muted)
-            }
-        }
 
-        Spacer(Modifier.height(29.dp))
-        Text("ВАШЕ СОЕДИНЕНИЕ", color = Muted, fontSize = 11.sp, letterSpacing = 2.sp)
-        Spacer(Modifier.height(13.dp))
-        Text(vpnStatus, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(7.dp))
-        Text(
-            if (selectedNode == null) {
-                "Лучший доступный сервер выбирается автоматически"
-            } else {
-                "Выбран сервер: ${selectedNode.name}"
-            },
-            color = Muted,
-            fontSize = 12.sp,
-            textAlign = TextAlign.Center,
-            lineHeight = 18.sp,
-            modifier = Modifier.padding(horizontal = 10.dp)
-        )
-        Spacer(Modifier.height(24.dp))
-
-        Box(
-            modifier = Modifier.size(228.dp)
-                .shadow(22.dp, CircleShape, ambientColor = Mint.copy(alpha = .18f), spotColor = Mint.copy(alpha = .25f))
-                .border(1.dp, Mint.copy(alpha = .55f), CircleShape)
-                .padding(11.dp)
-                .border(1.dp, Mint.copy(alpha = .20f), CircleShape)
-                .background(
-                    androidx.compose.ui.graphics.Brush.radialGradient(
-                        listOf(Color(0xFF1B3D39), Color(0xFF101C2A), Surface)
-                    ),
-                    CircleShape
+            Spacer(Modifier.height(22.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                InfoTile(
+                    modifier = Modifier.weight(1f),
+                    label = "СЕТЬ",
+                    value = networkLabel,
+                    icon = Icons.Default.Wifi,
+                    accent = Color(0xFF75BDF4)
                 )
-                .clickable { onToggleVpn(mode) },
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Default.Bolt, null, tint = Mint, modifier = Modifier.size(45.dp))
-                Spacer(Modifier.height(8.dp))
-                Text(if (vpnStatus == "VPN подключён") "ОТКЛЮЧИТЬ" else "ВКЛЮЧИТЬ", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
-                Spacer(Modifier.height(5.dp))
-                Text("VPN", color = Mint, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-            }
-        }
-
-        Spacer(Modifier.height(24.dp))
-        Row(
-            Modifier.fillMaxWidth().background(Surface, RoundedCornerShape(17.dp)).padding(15.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text("ТЕКУЩАЯ СЕТЬ", color = Muted, fontSize = 9.sp, letterSpacing = 1.sp)
-                Spacer(Modifier.height(5.dp))
-                Text(networkLabel, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-            }
-            Box(Modifier.width(1.dp).height(34.dp).background(Color(0xFF293347)))
-            Spacer(Modifier.width(15.dp))
-            Column(Modifier.weight(1f)) {
-                Text("ВЫБРАННЫЙ ПРОФИЛЬ", color = Muted, fontSize = 9.sp, letterSpacing = .5.sp)
-                Spacer(Modifier.height(5.dp))
-                Text(profile, color = Mint, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-            }
-        }
-
-        Spacer(Modifier.height(13.dp))
-        Row(
-            Modifier.fillMaxWidth().background(Surface, RoundedCornerShape(16.dp))
-                .clickable(onClick = onOpenServers).padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.Default.Public, null, tint = Mint)
-            Spacer(Modifier.width(11.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Серверы", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                Text(
-                    if (selectedNode == null) "${serverCount.intValue} серверов в каталоге" else "${selectedNode.protocol} • ${selectedNode.host}:${selectedNode.port}",
-                    color = Muted,
-                    fontSize = 11.sp
+                InfoTile(
+                    modifier = Modifier.weight(1f),
+                    label = "ПРОФИЛЬ",
+                    value = profile,
+                    icon = Icons.Default.Tune,
+                    accent = Mint
                 )
             }
-            Text("Открыть", color = Mint, fontSize = 11.sp)
-        }
 
-        if (showSettings) {
             Spacer(Modifier.height(12.dp))
-            ModePicker(mode = mode, onModeChange = { mode = it; preferences.edit().putString("mode", it).apply() })
+            Surface(
+                modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenServers),
+                color = Color(0xFF121D2C),
+                shape = RoundedCornerShape(18.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF26384A))
+            ) {
+                Row(
+                    Modifier.padding(horizontal = 15.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        Modifier.size(38.dp).background(Mint.copy(alpha = .12f), RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Public, null, tint = Mint, modifier = Modifier.size(21.dp))
+                    }
+                    Spacer(Modifier.width(11.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Серверы", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(
+                            if (selectedNode == null) "${serverCount.intValue} серверов • авто выбор" else "${selectedNode.country} • ${selectedNode.protocol} • ${selectedNode.host}:${selectedNode.port}",
+                            color = Muted,
+                            fontSize = 10.sp,
+                            maxLines = 1
+                        )
+                    }
+                    Text("ОТКРЫТЬ", color = Mint, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .7.sp)
+                    Spacer(Modifier.width(4.dp))
+                    Icon(Icons.Default.ChevronRight, null, tint = Mint, modifier = Modifier.size(17.dp))
+                }
+            }
+
+            AnimatedVisibility(
+                visible = showSettings,
+                enter = fadeIn(tween(180)) + scaleIn(initialScale = .97f, animationSpec = tween(180)),
+                exit = fadeOut(tween(120)) + scaleOut(targetScale = .98f, animationSpec = tween(120))
+            ) {
+                Column(Modifier.fillMaxWidth().padding(top = 12.dp).animateContentSize()) {
+                    ModePicker(
+                        mode = mode,
+                        onModeChange = {
+                            mode = it
+                            preferences.edit().putString("mode", it).apply()
+                        }
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(18.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Shield, null, tint = Mint.copy(alpha = .7f), modifier = Modifier.size(13.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("АВТОВЫБОР • УМНОЕ ПОДКЛЮЧЕНИЕ", color = Muted, fontSize = 8.sp, letterSpacing = .8.sp)
+            }
+            Spacer(Modifier.height(10.dp))
         }
-        Spacer(Modifier.weight(1f))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.CheckCircle, null, tint = Mint.copy(alpha = .7f), modifier = Modifier.size(13.dp))
-            Spacer(Modifier.width(6.dp))
-            Text("АВТОВЫБОР • УМНОЕ ПОДКЛЮЧЕНИЕ", color = Muted, fontSize = 9.sp, letterSpacing = .8.sp)
+    }
+}
+
+@Composable
+private fun InfoTile(
+    modifier: Modifier = Modifier,
+    label: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accent: Color
+) {
+    Surface(
+        modifier = modifier,
+        color = Color(0xFF121D2C),
+        shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF26384A))
+    ) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, null, tint = accent, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(label, color = Muted, fontSize = 8.sp, letterSpacing = 1.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(value, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
         }
     }
 }
