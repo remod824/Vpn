@@ -17,7 +17,7 @@ import java.net.URL
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
-import java.util.Base64
+import android.util.Base64
 import java.util.Locale
 
 data class ServerNode(
@@ -314,9 +314,9 @@ object ServerCatalog {
 
     private fun decodeBase64(value: String): String? = runCatching {
         val clean = value.replace("-", "+").replace("_", "/")
-            .filterNot(Char::isWhitespace)
+            .filterNot { it.isWhitespace() }
         val padded = clean + "=".repeat((4 - clean.length % 4) % 4)
-        String(Base64.getDecoder().decode(padded), StandardCharsets.UTF_8)
+        String(Base64.decode(padded, Base64.DEFAULT or Base64.URL_SAFE), StandardCharsets.UTF_8)
     }.getOrNull()
 
     private fun decodePart(value: String): String =
@@ -338,7 +338,7 @@ object ServerCatalog {
             listOf("🇵🇱", "poland", "польш", "pl") to "Польша",
             listOf("🇨🇦", "canada", "канада", "ca") to "Канада"
         )
-        return countries.firstOrNull { (keys, _) -> keys.any(value::contains) }?.second ?: "Неизвестно"
+        return countries.firstOrNull { (keys, _) -> keys.any { key -> value.contains(key) } }?.second ?: "Неизвестно"
     }
 
     private fun probe(host: String, port: Int): Long {
