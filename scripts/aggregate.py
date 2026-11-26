@@ -12,6 +12,7 @@ SOURCES = ROOT / "sources.txt"
 OUT = ROOT / "dist"
 SCHEMES = ("vless://", "vmess://", "trojan://", "ss://", "socks://")
 MAX_NODES = 12000
+HAPP_NODES = 1000
 TIMEOUT = 25
 
 def fetch(url: str) -> str:
@@ -63,11 +64,15 @@ def main() -> None:
     encoded = base64.b64encode(raw.encode()).decode() + "\n"
     (OUT / "happ.txt").write_text(encoded)
     (OUT / "raw.txt").write_text(raw)
+    small_nodes = nodes[:HAPP_NODES]
+    small_raw = "\\n".join(small_nodes) + "\\n"
+    small_encoded = base64.b64encode(small_raw.encode()).decode() + "\\n"
+    (OUT / "happ-1000.txt").write_text(small_encoded)
     (OUT / "status.txt").write_text(
         f"Configs: {len(nodes)}\nSources: {len(urls)}\nFailed sources: {len(failures)}\n"
         + "\n".join(failures) + "\n"
     )
-    print(f"Published {len(nodes)} unique configs from {len(urls)} feeds.")
+    print(f"Published {len(nodes)} unique configs; Happ compact file: {len(small_nodes)} configs.")
 
 if __name__ == "__main__":
     main()
