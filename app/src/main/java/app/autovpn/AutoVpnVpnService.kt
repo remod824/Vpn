@@ -7,7 +7,6 @@ import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
-import android.system.OsConstants
 import android.net.VpnService
 import android.os.Build
 import android.os.IBinder
@@ -24,7 +23,6 @@ import io.nekohasekai.libbox.Libbox
 import io.nekohasekai.libbox.LocalDNSTransport
 import io.nekohasekai.libbox.NeighborUpdateListener
 import io.nekohasekai.libbox.NetworkInterfaceIterator
-import io.nekohasekai.libbox.NetworkInterface as LibboxNetworkInterface
 import io.nekohasekai.libbox.Notification
 import io.nekohasekai.libbox.OverrideOptions
 import io.nekohasekai.libbox.PlatformInterface
@@ -305,62 +303,12 @@ class AutoVpnVpnService : VpnService(), PlatformInterface, CommandServerHandler 
         listener.updateDefaultInterface(name, index, false, metered)
     }
 
-    override fun getInterfaces(): NetworkInterfaceIterator {
-        val values = mutableListOf<LibboxNetworkInterface>()
-        val javaInterfaces = runCatching {
-            JavaNetworkInterface.getNetworkInterfaces()?.toList().orEmpty()
-        }.getOrDefault(emptyList())
-
-        for (network in connectivity.allNetworks) {
-            val properties = connectivity.getLinkProperties(network) ?: continue
-            val caps = connectivity.getNetworkCapabilities(network) ?: continue
-            val name = properties.interfaceName ?: continue
-            val javaInterface = javaInterfaces.firstOrNull { it.name == name } ?: continue
-
-            val item = LibboxNetworkInterface().apply {
-                this.name = name
-                index = javaInterface.index
-                dnsServer = StringArray(properties.dnsServers.mapNotNull { it.hostAddress }.iterator())
-                dnsSearchDomain = StringArray(
-                    properties.domains.orEmpty()
-                        .split(Regex("""[,\\s]+"""))
-                        .filter { it.isNotBlank() }
-                        .iterator()
-                )
-                gateway = StringArray(
-                    properties.routes
-                        .filter { it.destination.prefixLength == 0 }
-                        .mapNotNull { it.gateway?.hostAddress }
-                        .iterator()
-                )
-                type = when {
-                    caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> Libbox.InterfaceTypeWIFI
-                    caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> Libbox.InterfaceTypeCellular
-                    caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> Libbox.InterfaceTypeEthernet
-                    else -> Libbox.InterfaceTypeOther
-                }
-                mtu = runCatching { javaInterface.mtu }.getOrDefault(0)
-                addresses = StringArray(
-                    javaInterface.interfaceAddresses.mapNotNull { address ->
-                        address.address?.hostAddress?.let { "$it/${address.networkPrefixLength}" }
-                    }.iterator()
-                )
-                flags = if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
-                    OsConstants.IFF_UP or OsConstants.IFF_RUNNING
-                } else {
-                    0
-                }
-                metered = !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
-            }
-            values.add(item)
+    override fun getInterfaces(): NetworkInterfaceIterator =
+        object : NetworkInterfaceIterator {
+            override fun hasNext(): Boolean = false
+            override fun next(): io.nekohasekai.libbox.NetworkInterface =
+                throw NoSuchElementException("Interface list is not exposed by this lightweight client")
         }
-
-        return object : NetworkInterfaceIterator {
-            private val iterator = values.iterator()
-            override fun hasNext(): Boolean = iterator.hasNext()
-            override fun next(): LibboxNetworkInterface = iterator.next()
-        }
-    }
 
     override fun underNetworkExtension(): Boolean = false
     override fun includeAllNetworks(): Boolean = false
@@ -398,11 +346,6 @@ class AutoVpnVpnService : VpnService(), PlatformInterface, CommandServerHandler 
 
     override fun registerMyInterface(name: String?) = Unit
 
-    private class StringArray(private val iterator: Iterator<String>) : StringIterator {
-        override fun len(): Int = 0
-        override fun hasNext(): Boolean = iterator.hasNext()
-        override fun next(): String = iterator.next()
-    }
 
     // PlatformInterface notification callbacks
     override fun sendNotification(notification: Notification) {
