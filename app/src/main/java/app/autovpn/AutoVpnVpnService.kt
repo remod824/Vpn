@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import android.system.OsConstants
 import android.net.VpnService
 import android.os.Build
 import android.os.IBinder
@@ -23,6 +24,7 @@ import io.nekohasekai.libbox.Libbox
 import io.nekohasekai.libbox.LocalDNSTransport
 import io.nekohasekai.libbox.NeighborUpdateListener
 import io.nekohasekai.libbox.NetworkInterfaceIterator
+import io.nekohasekai.libbox.NetworkInterface as LibboxNetworkInterface
 import io.nekohasekai.libbox.Notification
 import io.nekohasekai.libbox.OverrideOptions
 import io.nekohasekai.libbox.PlatformInterface
@@ -65,6 +67,7 @@ class AutoVpnVpnService : VpnService(), PlatformInterface, CommandServerHandler 
     private var tunDescriptor: android.os.ParcelFileDescriptor? = null
     private val stopping = AtomicBoolean(false)
     private var interfaceListener: InterfaceUpdateListener? = null
+    private var defaultNetworkCallback: ConnectivityManager.NetworkCallback? = null
     private val connectivity by lazy { getSystemService<ConnectivityManager>()!! }
     private val notificationManager by lazy { getSystemService<NotificationManager>()!! }
 
@@ -258,12 +261,34 @@ class AutoVpnVpnService : VpnService(), PlatformInterface, CommandServerHandler 
 
     override fun startDefaultInterfaceMonitor(listener: InterfaceUpdateListener) {
         interfaceListener = listener
-        val network = connectivity.activeNetwork
-        reportDefaultInterface(network)
+        if (defaultNetworkCallback == null) {
+            val callback = object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) {
+                    reportDefaultInterface(network)
+                }
+
+                override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
+                    reportDefaultInterface(network)
+                }
+
+                override fun onLost(network: Network) {
+                    reportDefaultInterface(connectivity.activeNetwork)
+                }
+            }
+            defaultNetworkCallback = callback
+            runCatching { connectivity.registerDefaultNetworkCallback(callback) }
+        }
+        reportDefaultInterface(connectivity.activeNetwork)
     }
 
     override fun closeDefaultInterfaceMonitor(listener: InterfaceUpdateListener) {
-        if (interfaceListener === listener) interfaceListener = null
+        if (interfaceListener === listener) {
+            interfaceListener = null
+            defaultNetworkCallback?.let { callback ->
+                runCatching { connectivity.unregisterNetworkCallback(callback) }
+            }
+            defaultNetworkCallback = null
+        }
     }
 
     private fun reportDefaultInterface(network: Network?) {
@@ -280,12 +305,62 @@ class AutoVpnVpnService : VpnService(), PlatformInterface, CommandServerHandler 
         listener.updateDefaultInterface(name, index, false, metered)
     }
 
-    override fun getInterfaces(): NetworkInterfaceIterator =
-        object : NetworkInterfaceIterator {
-            override fun hasNext(): Boolean = false
-            override fun next(): io.nekohasekai.libbox.NetworkInterface =
-                throw NoSuchElementException("No interface snapshot available")
+    override fun getInterfaces(): NetworkInterfaceIterator {
+        val values = mutableListOf<LibboxNetworkInterface>()
+        val javaInterfaces = runCatching {
+            JavaNetworkInterface.getNetworkInterfaces()?.toList().orEmpty()
+        }.getOrDefault(emptyList())
+
+        for (network in connectivity.allNetworks) {
+            val properties = connectivity.getLinkProperties(network) ?: continue
+            val caps = connectivity.getNetworkCapabilities(network) ?: continue
+            val name = properties.interfaceName ?: continue
+            val javaInterface = javaInterfaces.firstOrNull { it.name == name } ?: continue
+
+            val item = LibboxNetworkInterface().apply {
+                this.name = name
+                index = javaInterface.index
+                dnsServer = StringArray(properties.dnsServers.mapNotNull { it.hostAddress }.iterator())
+                dnsSearchDomain = StringArray(
+                    properties.domains.orEmpty()
+                        .split(Regex("""[,\\s]+"""))
+                        .filter { it.isNotBlank() }
+                        .iterator()
+                )
+                gateway = StringArray(
+                    properties.routes
+                        .filter { it.destination.prefixLength == 0 }
+                        .mapNotNull { it.gateway?.hostAddress }
+                        .iterator()
+                )
+                type = when {
+                    caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> LibboxNetworkInterface.InterfaceTypeWIFI
+                    caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> LibboxNetworkInterface.InterfaceTypeCellular
+                    caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> LibboxNetworkInterface.InterfaceTypeEthernet
+                    else -> LibboxNetworkInterface.InterfaceTypeOther
+                }
+                mtu = runCatching { javaInterface.mtu }.getOrDefault(0)
+                addresses = StringArray(
+                    javaInterface.interfaceAddresses.mapNotNull { address ->
+                        address.address?.hostAddress?.let { "$it/${address.networkPrefixLength}" }
+                    }.iterator()
+                )
+                flags = if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
+                    OsConstants.IFF_UP or OsConstants.IFF_RUNNING
+                } else {
+                    0
+                }
+                metered = !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+            }
+            values.add(item)
         }
+
+        return object : NetworkInterfaceIterator {
+            private val iterator = values.iterator()
+            override fun hasNext(): Boolean = iterator.hasNext()
+            override fun next(): LibboxNetworkInterface = iterator.next()
+        }
+    }
 
     override fun underNetworkExtension(): Boolean = false
     override fun includeAllNetworks(): Boolean = false
@@ -322,6 +397,12 @@ class AutoVpnVpnService : VpnService(), PlatformInterface, CommandServerHandler 
     }
 
     override fun registerMyInterface(name: String?) = Unit
+
+    private class StringArray(private val iterator: Iterator<String>) : StringIterator {
+        override fun len(): Int = 0
+        override fun hasNext(): Boolean = iterator.hasNext()
+        override fun next(): String = iterator.next()
+    }
 
     // PlatformInterface notification callbacks
     override fun sendNotification(notification: Notification) {
