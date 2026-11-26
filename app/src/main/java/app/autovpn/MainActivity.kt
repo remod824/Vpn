@@ -106,16 +106,27 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
     }
 
-    private fun toggleVpn() {
+    private fun toggleVpn(mode: String) {
         if (vpnStatus == "VPN подключён" || vpnStatus.startsWith("Запуск VPN")) {
             AutoVpnVpnService.stop(this)
             return
         }
         val nodes = ServerCatalog.load(this)
-        val node = ServerCatalog.selected(this)
-            ?: nodes.filter { it.isWorking }.minByOrNull { it.pingMs }
+        val useSpecialProfile = when (mode) {
+            "Всегда спец. профиль" -> true
+            "Всегда обычный VPN" -> false
+            else -> networkLabel != "Wi-Fi"
+        }
+        // An explicitly chosen server always takes priority over automatic selection.
+        val node = ServerCatalog.selected(this) ?: nodes
+            .filter { it.isWorking && it.isSpecialProfile == useSpecialProfile }
+            .minByOrNull { it.pingMs }
         if (node == null) {
-            vpnStatus = "Нет проверенного сервера. Обнови список серверов."
+            vpnStatus = if (useSpecialProfile) {
+                "Нет доступного сервера с меткой спец. профиля"
+            } else {
+                "Нет проверенного обычного сервера"
+            }
             return
         }
         val config = runCatching { SingBoxConfigBuilder.build(node) }.getOrElse {
@@ -140,7 +151,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun AutoVpnApp(networkLabel: String, vpnStatus: String, onToggleVpn: () -> Unit) {
+private fun AutoVpnApp(networkLabel: String, vpnStatus: String, onToggleVpn: (String) -> Unit) {
     val context = LocalContext.current
     var showServers by remember { mutableStateOf(false) }
     var selectedNode by remember { mutableStateOf(ServerCatalog.selected(context)) }
@@ -180,10 +191,15 @@ private fun AutoVpnHome(
     networkLabel: String,
     selectedNode: ServerNode?,
     vpnStatus: String,
-    onToggleVpn: () -> Unit,
+    onToggleVpn: (String) -> Unit,
     onOpenServers: () -> Unit
 ) {
-    var mode by remember { mutableStateOf("Автоматически") }
+    val preferences = remember(context) {
+        context.getSharedPreferences("autovpn_settings", Context.MODE_PRIVATE)
+    }
+    var mode by remember {
+        mutableStateOf(preferences.getString("mode", "Автоматически") ?: "Автоматически")
+    }
     var showSettings by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val serverCount = remember { mutableIntStateOf(ServerCatalog.load(context).size) }
@@ -251,7 +267,7 @@ private fun AutoVpnHome(
                     ),
                     CircleShape
                 )
-                .clickable(onClick = onToggleVpn),
+                .clickable { onToggleVpn(mode) },
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -303,7 +319,7 @@ private fun AutoVpnHome(
 
         if (showSettings) {
             Spacer(Modifier.height(12.dp))
-            ModePicker(mode = mode, onModeChange = { mode = it })
+            ModePicker(mode = mode, onModeChange = { mode = it; preferences.edit().putString("mode", it).apply() })
         }
         Spacer(Modifier.weight(1f))
         Row(verticalAlignment = Alignment.CenterVertically) {
