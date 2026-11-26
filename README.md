@@ -1,28 +1,25 @@
-# Happ public subscription aggregator
+# AutoVPN
 
-This repository combines public V2Ray/Xray subscription feeds into one Happ-compatible Base64 subscription.
+AutoVPN is an Android VPN client project. The current 0.1.0 milestone establishes the native Android/Compose project and the first dark home-screen design.
 
-## Add to Happ
+## Current status
 
-Use this subscription URL:
+This is an early UI and Android project foundation, **not yet a working VPN client**. The VPN engine, subscription parser, persistent server catalogue, and real connection flow are still being implemented. The screen intentionally labels the VPN as not connected.
 
-`https://raw.githubusercontent.com/remod824/Vpn/main/dist/happ.txt`
+## Build
 
-In Happ, add it as a subscription URL. Later, use **Update** in Happ to download the latest published list.
+GitHub Actions builds a debug APK on pushes affecting Android project files and on manual workflow runs. Open the repository's **Actions** tab, select **Build AutoVPN APK**, and download the **AutoVPN-debug** artifact from a successful run.
 
-## Refresh schedule
+## Planned features
 
-GitHub Actions rebuilds the list every 3 hours and can also be started manually from the **Actions** tab. Duplicate entries are removed. If every source fails, the last published subscription is preserved.
+- Automatic profile policy for Wi-Fi and cellular networks.
+- Manual server list, favorites, latency sorting, and working-only filter.
+- Subscription refresh, deduplication, local storage, and background checks.
+- Memory-conscious loading and reconnection to the last known-good server.
 
-## Sources
+See ANDROID_ROADMAP.md for implementation stages.
 
-See [sources.txt](sources.txt). These are public third-party feeds; the aggregator does not own or operate the proxy servers.
+## Existing Happ feed
 
-## Important
-
-Public proxy nodes are operated by unknown third parties. They may stop working, log connection metadata, or be malicious. Do not use them for banking, passwords, or other sensitive traffic. A node tested by its source may still be blocked or unreachable on a particular mobile network. Aggregation does not guarantee that a node bypasses an operator's allowlist.
-
-<!-- Initial build trigger -->
-
-
-Compact Happ subscription (1000 nodes): https://raw.githubusercontent.com/remod824/Vpn/main/dist/happ-1000.txt
+The original Happ subscription aggregator remains available at:
+https://raw.githubusercontent.com/remod824/Vpn/main/dist/happ.txt
