@@ -392,19 +392,27 @@ private fun AutoVpnHome(
                     .clickable(enabled = !busy) { onToggleVpn(mode) },
                 contentAlignment = Alignment.Center
             ) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxSize()) {
+                    // Keep the hawk in the upper half so it never collides with the controls.
                     Image(
                         painter = painterResource(R.drawable.hawk_logo),
                         contentDescription = "Ястреб",
                         contentScale = ContentScale.Fit,
                         colorFilter = ColorFilter.tint(hawkTint),
-                        modifier = Modifier.fillMaxSize(.76f).graphicsLayer {
-                            alpha = hawkAlpha
-                            scaleX = if (hawkActive) hawkPulse else 1f
-                            scaleY = if (hawkActive) hawkPulse else 1f
-                        }
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 18.dp)
+                            .fillMaxSize(.50f)
+                            .graphicsLayer {
+                                alpha = hawkAlpha
+                                scaleX = if (hawkActive) hawkPulse else 1f
+                                scaleY = if (hawkActive) hawkPulse else 1f
+                            }
                     )
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center).offset(y = 42.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                     AnimatedContent(
                         targetState = connected,
                         label = "connect-icon"
