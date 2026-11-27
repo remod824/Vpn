@@ -19,6 +19,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateColor
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -27,6 +28,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -58,6 +60,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -71,10 +76,11 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val Bg = Color(0xFF080C16)
-private val Surface = Color(0xFF121A29)
-private val Mint = Color(0xFF58E0B0)
-private val Muted = Color(0xFF8995A9)
+private val Bg = Color(0xFF050506)
+private val Surface = Color(0xFF101012)
+private val Mint = Color(0xFFB9363C)
+private val HawkRed = Color(0xFFFF3B30)
+private val Muted = Color(0xFF85858C)
 
 class MainActivity : ComponentActivity() {
     private lateinit var connectivity: ConnectivityManager
@@ -225,6 +231,24 @@ private fun AutoVpnHome(
     val serverCount = remember { mutableIntStateOf(ServerCatalog.load(context).size) }
     val connected = vpnStatus == "VPN подключён"
     val busy = vpnStatus.startsWith("Подключение") || vpnStatus.startsWith("Запуск VPN")
+    val hawkActive = connected || busy
+    val hawkTransition = rememberInfiniteTransition(label = "hawk-red-glow")
+    val hawkTint by hawkTransition.animateColor(
+        initialValue = Color(0xFF9E2028),
+        targetValue = Color(0xFFFF5147),
+        animationSpec = infiniteRepeatable(tween(950), RepeatMode.Reverse),
+        label = "hawk-color"
+    )
+    val hawkPulse by hawkTransition.animateFloat(
+        initialValue = .88f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(850), RepeatMode.Reverse),
+        label = "hawk-light"
+    )
+    val hawkAlpha by animateFloatAsState(
+        targetValue = if (hawkActive) 1f else .10f,
+        animationSpec = tween(if (hawkActive) 900 else 450),
+        label = "hawk-visibility"
+    )
     val infinite = rememberInfiniteTransition(label = "connect-pulse")
     val pulse by infinite.animateFloat(
         initialValue = 1f,
@@ -258,7 +282,7 @@ private fun AutoVpnHome(
             .fillMaxSize()
             .background(
                 androidx.compose.ui.graphics.Brush.verticalGradient(
-                    listOf(Color(0xFF080D19), Color(0xFF0B1422), Color(0xFF080C16))
+                    listOf(Color(0xFF050506), Color(0xFF0D0D10), Color(0xFF050506))
                 )
             )
     ) {
@@ -289,11 +313,11 @@ private fun AutoVpnHome(
                         .border(1.dp, Mint.copy(alpha = .20f), RoundedCornerShape(14.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Bolt, null, tint = Mint, modifier = Modifier.size(25.dp))
+                    Image(painter = painterResource(R.drawable.hawk_logo), contentDescription = "Hawk", modifier = Modifier.size(30.dp), contentScale = ContentScale.Fit)
                 }
                 Spacer(Modifier.width(11.dp))
                 Column {
-                    Text("AutoVPN", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-.4).sp)
+                    Text("HAWK VPN", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-.4).sp)
                     Text("PRIVATE CONNECTION", color = Muted, fontSize = 8.sp, letterSpacing = 1.8.sp)
                 }
                 Spacer(Modifier.weight(1f))
@@ -355,14 +379,14 @@ private fun AutoVpnHome(
                         scaleX = pulse * buttonScale
                         scaleY = pulse * buttonScale
                     }
-                    .shadow(28.dp, CircleShape, ambientColor = Mint.copy(alpha = .22f), spotColor = Mint.copy(alpha = .30f))
+                    .shadow(28.dp, CircleShape, ambientColor = HawkRed.copy(alpha = if (hawkActive) .52f else .06f), spotColor = HawkRed.copy(alpha = if (hawkActive) .58f else .08f))
                     .background(
                         androidx.compose.ui.graphics.Brush.radialGradient(
-                            listOf(Color(0xFF24574D), Color(0xFF173A3A), Color(0xFF101D2D))
+                            if (hawkActive) listOf(Color(0xFF57171C), Color(0xFF241014), Color(0xFF09090B)) else listOf(Color(0xFF171719), Color(0xFF101012), Color(0xFF080809))
                         ),
                         CircleShape
                     )
-                    .border(1.5.dp, Mint.copy(alpha = if (connected) .85f else .55f), CircleShape)
+                    .border(1.5.dp, HawkRed.copy(alpha = if (hawkActive) .95f else .24f), CircleShape)
                     .padding(10.dp)
                     .border(1.dp, Color.White.copy(alpha = .10f), CircleShape)
                     .padding(8.dp)
@@ -370,7 +394,19 @@ private fun AutoVpnHome(
                     .clickable(enabled = !busy) { onToggleVpn(mode) },
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Image(
+                        painter = painterResource(R.drawable.hawk_logo),
+                        contentDescription = "Ястреб",
+                        contentScale = ContentScale.Fit,
+                        colorFilter = ColorFilter.tint(if (hawkActive) hawkTint else Color(0xFF77777D)),
+                        modifier = Modifier.fillMaxSize(.76f).graphicsLayer {
+                            alpha = hawkAlpha
+                            scaleX = if (hawkActive) hawkPulse else 1f
+                            scaleY = if (hawkActive) hawkPulse else 1f
+                        }
+                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     AnimatedContent(
                         targetState = connected,
                         label = "connect-icon"
@@ -394,7 +430,8 @@ private fun AutoVpnHome(
                         Text(label, color = Color.White, fontSize = if (buttonSize < 180.dp) 15.sp else 18.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .8.sp, textAlign = TextAlign.Center)
                     }
                     Spacer(Modifier.height(4.dp))
-                    Text(if (connected) "ЗАЩИЩЁННЫЙ КАНАЛ" else "ОДНО КАСАНИЕ", color = Mint, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                    Text(if (connected) "HAWK PROTECTED" else "ONE TAP TO CONNECT", color = if (hawkActive) HawkRed else Mint, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+                    }
                 }
             }
 
@@ -472,7 +509,7 @@ private fun AutoVpnHome(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Shield, null, tint = Mint.copy(alpha = .7f), modifier = Modifier.size(13.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("АВТОВЫБОР • УМНОЕ ПОДКЛЮЧЕНИЕ", color = Muted, fontSize = 8.sp, letterSpacing = .8.sp)
+                Text("HAWK CORE • SMART CONNECTION", color = Muted, fontSize = 8.sp, letterSpacing = .8.sp)
             }
             Spacer(Modifier.height(10.dp))
         }

@@ -1,10 +1,10 @@
-# AutoVPN
+# Hawk VPN
 
-AutoVPN is an Android VPN client project built with Kotlin, Jetpack Compose and the libbox Android binding.
+Hawk VPN is an Android VPN client project built with Kotlin, Jetpack Compose and the libbox Android binding.
 
 ## Current implementation
 
-The current 0.3.0 development build includes:
+The current 0.4.0 development build includes:
 
 - A redesigned responsive dark home screen with a pulsing animated connect/disconnect button, animated status/icon transitions, compact network/profile tiles and expandable settings.
 - Scroll-safe layouts, safe-area insets, weighted rows, and truncation for long server names so controls remain inside narrow screens.
@@ -19,7 +19,7 @@ The app is still an early development build. Protocol variants and subscription 
 
 ## Build APK
 
-GitHub Actions builds the ARM64 debug APK. Open the repository's **Actions** tab, select **Build AutoVPN APK**, open the latest successful run and download the **AutoVPN-debug** artifact. This is a debug APK, not a Play Store release.
+GitHub Actions builds the ARM64 debug APK. Open the repository's **Actions** tab, select **Build Hawk VPN APK**, open the latest successful run and download the **Hawk VPN-debug** artifact. This is a debug APK, not a Play Store release.
 
 ## Security notes
 
@@ -33,3 +33,9 @@ The app uses the libbox Android binding. See [THIRD_PARTY_NOTICES.md](THIRD_PART
 
 The original Happ subscription aggregator remains available at:
 https://raw.githubusercontent.com/remod824/Vpn/main/dist/happ.txt
+
+
+## HAWK VPN 0.4.0
+- Black-and-red visual theme and hawk brand identity.
+- Custom hawk vector emblem used in the launcher and connection control.
+- The hawk fades in and pulses red while the VPN is connecting or connected.

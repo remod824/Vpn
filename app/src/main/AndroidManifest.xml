@@ -7,7 +7,9 @@
 
     <application
         android:allowBackup="false"
-        android:label="AutoVPN"
+        android:label="Hawk VPN"
+        android:icon="@drawable/hawk_logo"
+        android:roundIcon="@drawable/hawk_logo"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.NoActionBar">
 
