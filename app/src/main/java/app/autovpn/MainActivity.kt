@@ -19,7 +19,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateColor
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -232,13 +231,12 @@ private fun AutoVpnHome(
     val connected = vpnStatus == "VPN подключён"
     val busy = vpnStatus.startsWith("Подключение") || vpnStatus.startsWith("Запуск VPN")
     val hawkActive = connected || busy
-    val hawkTransition = rememberInfiniteTransition(label = "hawk-red-glow")
-    val hawkTint by hawkTransition.animateColor(
-        initialValue = Color(0xFF9E2028),
-        targetValue = Color(0xFFFF5147),
-        animationSpec = infiniteRepeatable(tween(950), RepeatMode.Reverse),
+    val hawkTint by androidx.compose.animation.animateColorAsState(
+        targetValue = if (hawkActive) HawkRed else Color(0xFF77777D),
+        animationSpec = tween(if (hawkActive) 950 else 450),
         label = "hawk-color"
     )
+    val hawkTransition = rememberInfiniteTransition(label = "hawk-red-glow")
     val hawkPulse by hawkTransition.animateFloat(
         initialValue = .88f, targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(850), RepeatMode.Reverse),
@@ -306,7 +304,7 @@ private fun AutoVpnHome(
                         .size(42.dp)
                         .background(
                             androidx.compose.ui.graphics.Brush.linearGradient(
-                                listOf(Color(0xFF2AD7A0).copy(alpha = .24f), Color(0xFF2A8EBD).copy(alpha = .12f))
+                                listOf(Color(0xFF9E2028).copy(alpha = .28f), Color(0xFF4A1118).copy(alpha = .18f))
                             ),
                             RoundedCornerShape(14.dp)
                         )
@@ -399,7 +397,7 @@ private fun AutoVpnHome(
                         painter = painterResource(R.drawable.hawk_logo),
                         contentDescription = "Ястреб",
                         contentScale = ContentScale.Fit,
-                        colorFilter = ColorFilter.tint(if (hawkActive) hawkTint else Color(0xFF77777D)),
+                        colorFilter = ColorFilter.tint(hawkTint),
                         modifier = Modifier.fillMaxSize(.76f).graphicsLayer {
                             alpha = hawkAlpha
                             scaleX = if (hawkActive) hawkPulse else 1f
