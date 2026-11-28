@@ -131,27 +131,17 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
     }
 
-    private fun toggleVpn(mode: String) {
+    private fun toggleVpn() {
         if (vpnStatus == "VPN подключён" || vpnStatus.startsWith("Запуск VPN")) {
             AutoVpnVpnService.stop(this)
             return
         }
         val nodes = ServerCatalog.load(this)
-        val useSpecialProfile = when (mode) {
-            "Всегда спец. профиль" -> true
-            "Всегда обычный VPN" -> false
-            else -> networkLabel != "Wi-Fi"
-        }
-        // An explicitly chosen server always takes priority over automatic selection.
         val node = ServerCatalog.selected(this) ?: nodes
-            .filter { it.isWorking && it.isSpecialProfile == useSpecialProfile }
+            .filter { it.isWorking }
             .minByOrNull { it.pingMs }
         if (node == null) {
-            vpnStatus = if (useSpecialProfile) {
-                "Нет доступного сервера с меткой спец. профиля"
-            } else {
-                "Нет проверенного обычного сервера"
-            }
+            vpnStatus = "Нет доступных серверов. Обнови список и попробуй снова."
             return
         }
         val config = runCatching { SingBoxConfigBuilder.build(node) }.getOrElse {
@@ -176,7 +166,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun AutoVpnApp(networkLabel: String, vpnStatus: String, onToggleVpn: (String) -> Unit) {
+private fun AutoVpnApp(networkLabel: String, vpnStatus: String, onToggleVpn: () -> Unit) {
     val context = LocalContext.current
     var showServers by remember { mutableStateOf(false) }
     var selectedNode by remember { mutableStateOf(ServerCatalog.selected(context)) }
@@ -220,13 +210,6 @@ private fun AutoVpnHome(
     onOpenServers: () -> Unit
 ) {
     val context = LocalContext.current
-    val preferences = remember(context) {
-        context.getSharedPreferences("autovpn_settings", Context.MODE_PRIVATE)
-    }
-    var mode by remember {
-        mutableStateOf(preferences.getString("mode", "Автоматически") ?: "Автоматически")
-    }
-    var showSettings by remember { mutableStateOf(false) }
     val serverCount = remember { mutableIntStateOf(ServerCatalog.load(context).size) }
     val connected = vpnStatus == "VPN подключён"
     val busy = vpnStatus.startsWith("Подключение") || vpnStatus.startsWith("Запуск VPN")
@@ -270,11 +253,6 @@ private fun AutoVpnHome(
         }
     }
 
-    val profile = when (mode) {
-        "Всегда обычный VPN" -> "Обычный VPN"
-        "Всегда спец. профиль" -> "Спец. профиль"
-        else -> if (networkLabel == "Wi-Fi") "Обычный VPN" else "Спец. профиль"
-    }
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
@@ -333,9 +311,6 @@ private fun AutoVpnHome(
                         Text(if (connected) "ЗАЩИЩЕНО" else "НЕ ПОДКЛЮЧЕНО", color = if (connected) Mint else Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = .5.sp)
                     }
                 }
-                IconButton(onClick = { showSettings = !showSettings }) {
-                    Icon(Icons.Default.Settings, contentDescription = "Настройки", tint = Muted)
-                }
             }
 
             Spacer(Modifier.height(26.dp))
@@ -389,7 +364,7 @@ private fun AutoVpnHome(
                     .border(1.dp, Color.White.copy(alpha = .10f), CircleShape)
                     .padding(8.dp)
                     .background(Color(0xFF0E1A28).copy(alpha = .70f), CircleShape)
-                    .clickable(enabled = !busy) { onToggleVpn(mode) },
+                    .clickable(enabled = !busy) { onToggleVpn() },
                 contentAlignment = Alignment.Center
             ) {
                 Box(Modifier.fillMaxSize()) {
@@ -455,9 +430,9 @@ private fun AutoVpnHome(
                 )
                 InfoTile(
                     modifier = Modifier.weight(1f),
-                    label = "ПРОФИЛЬ",
-                    value = profile,
-                    icon = Icons.Default.Tune,
+                    label = "СЕРВЕРОВ",
+                    value = serverCount.intValue.toString(),
+                    icon = Icons.Default.Public,
                     accent = Mint
                 )
             }
@@ -492,22 +467,6 @@ private fun AutoVpnHome(
                     Text("ОТКРЫТЬ", color = Mint, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .7.sp)
                     Spacer(Modifier.width(4.dp))
                     Icon(Icons.Default.ChevronRight, null, tint = Mint, modifier = Modifier.size(17.dp))
-                }
-            }
-
-            AnimatedVisibility(
-                visible = showSettings,
-                enter = fadeIn(tween(180)) + scaleIn(initialScale = .97f, animationSpec = tween(180)),
-                exit = fadeOut(tween(120)) + scaleOut(targetScale = .98f, animationSpec = tween(120))
-            ) {
-                Column(Modifier.fillMaxWidth().padding(top = 12.dp).animateContentSize()) {
-                    ModePicker(
-                        mode = mode,
-                        onModeChange = {
-                            mode = it
-                            preferences.edit().putString("mode", it).apply()
-                        }
-                    )
                 }
             }
 
@@ -549,26 +508,6 @@ private fun InfoTile(
 }
 
 @Composable
-private fun ModePicker(mode: String, onModeChange: (String) -> Unit) {
-    Column(Modifier.fillMaxWidth().background(Surface, RoundedCornerShape(16.dp)).padding(13.dp)) {
-        Text("РЕЖИМ РАБОТЫ", color = Muted, fontSize = 10.sp, letterSpacing = 1.sp)
-        listOf("Автоматически", "Всегда обычный VPN", "Всегда спец. профиль").forEach { option ->
-            Row(
-                Modifier.fillMaxWidth().clickable { onModeChange(option) }.padding(vertical = 5.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(option, color = Color.White, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                RadioButton(
-                    selected = mode == option,
-                    onClick = { onModeChange(option) },
-                    colors = RadioButtonDefaults.colors(selectedColor = Mint)
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun ServerPickerScreen(
     onBack: () -> Unit,
     onSelect: (ServerNode) -> Unit
@@ -576,7 +515,7 @@ private fun ServerPickerScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var servers by remember { mutableStateOf(ServerCatalog.load(context)) }
-    var filter by remember { mutableStateOf("Все страны") }
+    var filter by remember { mutableStateOf("Все серверы") }
     var search by remember { mutableStateOf("") }
     var onlyWorking by remember { mutableStateOf(false) }
     var sortByPing by remember { mutableStateOf(true) }
@@ -608,8 +547,6 @@ private fun ServerPickerScreen(
     val visibleServers = remember(servers, filter, search, onlyWorking, sortByPing) {
         val filtered = servers.filter { node ->
             val matchesTab = when (filter) {
-                "Белые списки" -> node.isSpecialProfile
-                "Обычные VPN" -> !node.isSpecialProfile
                 "Избранные" -> node.isFavorite
                 else -> true
             }
@@ -669,7 +606,7 @@ private fun ServerPickerScreen(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(7.dp)
         ) {
-            listOf("Все страны", "Белые списки", "Обычные VPN", "Избранные").forEach { tab ->
+            listOf("Все серверы", "Избранные").forEach { tab ->
                 FilterChip(
                     selected = filter == tab,
                     onClick = { filter = tab },
@@ -736,7 +673,7 @@ private fun ServerPickerScreen(
             }
         }
         Text(
-            "Проверка TCP показывает доступность порта, но не гарантирует работу VPN или доступ через фильтры оператора.",
+            "Проверка TCP показывает только доступность порта. Фактическое подключение зависит от состояния сервера и сети.",
             color = Muted,
             fontSize = 9.sp,
             lineHeight = 13.sp,
