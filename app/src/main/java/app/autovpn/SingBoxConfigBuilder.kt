@@ -254,9 +254,17 @@ object SingBoxConfigBuilder {
     private fun decode(value: String): String =
         runCatching { URLDecoder.decode(value, "UTF-8") }.getOrDefault(value)
 
-    private fun decodeBase64(value: String): String? = runCatching {
-        val clean = value.filterNot { it.isWhitespace() }
-        val padded = clean + "=".repeat((4 - clean.length % 4) % 4)
-        String(Base64.decode(padded, Base64.DEFAULT or Base64.URL_SAFE), StandardCharsets.UTF_8)
-    }.getOrNull()
+    private fun decodeBase64(value: String): String? {
+        val compact = value.filterNot { it.isWhitespace() }
+        val standard = compact.replace("-", "+").replace("_", "/")
+        val padded = standard + "=".repeat((4 - standard.length % 4) % 4)
+        val decoded = runCatching {
+            String(Base64.decode(padded, Base64.DEFAULT), StandardCharsets.UTF_8)
+        }.getOrNull()
+        if (!decoded.isNullOrBlank()) return decoded
+        val urlPadded = compact + "=".repeat((4 - compact.length % 4) % 4)
+        return runCatching {
+            String(Base64.decode(urlPadded, Base64.URL_SAFE), StandardCharsets.UTF_8)
+        }.getOrNull()
+    }
 }
