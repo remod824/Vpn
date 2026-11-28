@@ -602,6 +602,7 @@ private fun ServerPickerScreen(
         )
 
         Spacer(Modifier.height(10.dp))
+        // The catalogue has only standard server and favorites views; no allowlist profiles.
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(7.dp)
