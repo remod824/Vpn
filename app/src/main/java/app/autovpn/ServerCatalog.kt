@@ -317,25 +317,74 @@ object ServerCatalog {
     private fun decodePart(value: String): String =
         runCatching { URLDecoder.decode(value, "UTF-8") }.getOrDefault(value)
 
-    private fun guessCountry(name: String): String {
-        val value = name.lowercase(Locale.ROOT)
-        val countries = listOf(
-            listOf("🇳🇱", "netherlands", "holland", "нидерланд", "голланд", "nl") to "Нидерланды",
-            listOf("🇩🇪", "germany", "deutschland", "германи", "германия", "de") to "Германия",
-            listOf("🇫🇮", "finland", "финлянд", "fi") to "Финляндия",
-            listOf("🇫🇷", "france", "франци", "франция", "fr") to "Франция",
-            listOf("🇺🇸", "united states", "usa", "america", "сша", "us") to "США",
-            listOf("🇬🇧", "united kingdom", "england", "britain", "великобрит", "gb", "uk") to "Великобритания",
-            listOf("🇷🇺", "russia", "росси", "россия", "ru") to "Россия",
-            listOf("🇸🇬", "singapore", "сингапур", "sg") to "Сингапур",
-            listOf("🇯🇵", "japan", "япони", "jp") to "Япония",
-            listOf("🇹🇷", "turkey", "türkiye", "турци", "турция", "tr") to "Турция",
-            listOf("🇵🇱", "poland", "польш", "pl") to "Польша",
-            listOf("🇨🇦", "canada", "канада", "ca") to "Канада"
-        )
-        return countries.firstOrNull { (keys, _) -> keys.any { key -> value.contains(key) } }?.second ?: "Неизвестно"
+    fun countryFlag(country: String): String = when (country) {
+        "Netherlands" -> "🇳🇱"
+        "Germany" -> "🇩🇪"
+        "France" -> "🇫🇷"
+        "Finland" -> "🇫🇮"
+        "United States" -> "🇺🇸"
+        "United Kingdom" -> "🇬🇧"
+        "Russia" -> "🇷🇺"
+        "Singapore" -> "🇸🇬"
+        "Japan" -> "🇯🇵"
+        "Turkey" -> "🇹🇷"
+        "Poland" -> "🇵🇱"
+        "Canada" -> "🇨🇦"
+        "Sweden" -> "🇸🇪"
+        "Norway" -> "🇳🇴"
+        "Switzerland" -> "🇨🇭"
+        "Austria" -> "🇦🇹"
+        "Belgium" -> "🇧🇪"
+        "Spain" -> "🇪🇸"
+        "Italy" -> "🇮🇹"
+        "Czechia" -> "🇨🇿"
+        "Romania" -> "🇷🇴"
+        "Ukraine" -> "🇺🇦"
+        "Hong Kong" -> "🇭🇰"
+        "South Korea" -> "🇰🇷"
+        "India" -> "🇮🇳"
+        "Australia" -> "🇦🇺"
+        "Brazil" -> "🇧🇷"
+        else -> "🌐"
     }
 
+    private fun guessCountry(name: String): String {
+        val value = name.lowercase(Locale.ROOT).replace('_', ' ').replace('-', ' ')
+        val countries = listOf(
+            listOf("netherlands", "holland", "nederland", "нидерланд", "голланд", "\\bnl\\b") to "Netherlands",
+            listOf("germany", "deutschland", "германи", "германия", "\\bde\\b") to "Germany",
+            listOf("finland", "финлянд", "\\bfi\\b") to "Finland",
+            listOf("france", "франци", "франция", "\\bfr\\b") to "France",
+            listOf("united states", "usa", "america", "сша", "\\bus\\b") to "United States",
+            listOf("united kingdom", "england", "britain", "великобрит", "\\bgb\\b", "\\buk\\b") to "United Kingdom",
+            listOf("russia", "росси", "россия", "\\bru\\b") to "Russia",
+            listOf("singapore", "сингапур", "\\bsg\\b") to "Singapore",
+            listOf("japan", "япони", "\\bjp\\b") to "Japan",
+            listOf("turkey", "türkiye", "турци", "турция", "\\btr\\b") to "Turkey",
+            listOf("poland", "польш", "\\bpl\\b") to "Poland",
+            listOf("canada", "канада", "\\bca\\b") to "Canada",
+            listOf("sweden", "швеци", "\\bse\\b") to "Sweden",
+            listOf("norway", "норвеги", "\\bno\\b") to "Norway",
+            listOf("switzerland", "швейцар", "\\bch\\b") to "Switzerland",
+            listOf("austria", "австри", "\\bat\\b") to "Austria",
+            listOf("belgium", "бельги", "\\bbe\\b") to "Belgium",
+            listOf("spain", "испания", "\\bes\\b") to "Spain",
+            listOf("italy", "итал", "\\bit\\b") to "Italy",
+            listOf("czech", "чехи", "\\bcz\\b") to "Czechia",
+            listOf("romania", "румыни", "\\bro\\b") to "Romania",
+            listOf("ukraine", "украин", "\\bua\\b") to "Ukraine",
+            listOf("hong kong", "гонконг", "\\bhk\\b") to "Hong Kong",
+            listOf("south korea", "korea", "корея", "\\bkr\\b") to "South Korea",
+            listOf("india", "индия", "\\bin\\b") to "India",
+            listOf("australia", "австрали", "\\bau\\b") to "Australia",
+            listOf("brazil", "бразили", "\\bbr\\b") to "Brazil"
+        )
+        return countries.firstOrNull { (keys, _) ->
+            keys.any { key ->
+                if (key.startsWith("\\\\b")) Regex(key).containsMatchIn(value) else value.contains(key)
+            }
+        }?.second ?: "Unknown"
+    }
     private fun probe(host: String, port: Int): Long {
         val started = System.nanoTime()
         return try {
