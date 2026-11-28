@@ -32,12 +32,7 @@ data class ServerNode(
     val isWorking: Boolean = false,
     val isFavorite: Boolean = false
 ) {
-    val isSpecialProfile: Boolean
-        get() {
-            val value = "$name $country".lowercase(Locale.ROOT)
-            return listOf("whitelist", "white-list", "white list", "белый список", "белые списки", "мтс", "mts", "allowlist")
-                .any(value::contains)
-        }
+
 }
 
 data class RefreshSummary(
