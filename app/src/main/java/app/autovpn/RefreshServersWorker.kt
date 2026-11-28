@@ -28,7 +28,7 @@ class RefreshServersWorker(
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
-            val request = PeriodicWorkRequestBuilder<RefreshServersWorker>(3, TimeUnit.HOURS)
+            val request = PeriodicWorkRequestBuilder<RefreshServersWorker>(1, TimeUnit.HOURS)
                 .setConstraints(constraints)
                 .build()
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
