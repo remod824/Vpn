@@ -206,7 +206,7 @@ private fun AutoVpnHome(
     networkLabel: String,
     selectedNode: ServerNode?,
     vpnStatus: String,
-    onToggleVpn: (String) -> Unit,
+    onToggleVpn: () -> Unit,
     onOpenServers: () -> Unit
 ) {
     val context = LocalContext.current
