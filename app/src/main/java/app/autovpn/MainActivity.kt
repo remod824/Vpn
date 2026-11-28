@@ -458,7 +458,7 @@ private fun AutoVpnHome(
                     Column(Modifier.weight(1f)) {
                         Text("Серверы", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         Text(
-                            if (selectedNode == null) "${serverCount.intValue} серверов • авто выбор" else "${selectedNode.country} • ${selectedNode.protocol} • ${selectedNode.host}:${selectedNode.port}",
+                            if (selectedNode == null) "${serverCount.intValue} servers • auto select" else "${ServerCatalog.countryFlag(selectedNode.country)} ${selectedNode.country} • ${selectedNode.protocol}",
                             color = Muted,
                             fontSize = 10.sp,
                             maxLines = 1
@@ -694,10 +694,10 @@ private fun ServerRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            Text(node.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("${ServerCatalog.countryFlag(node.country)}  ${if (node.country == "Unknown") "Unknown location" else node.country}", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(4.dp))
             Text(
-                "${node.country} • ${node.protocol} • ${node.host}:${node.port}",
+                "${node.protocol} • ${node.host}:${node.port}",
                 color = Muted,
                 fontSize = 10.sp,
                 maxLines = 1,
