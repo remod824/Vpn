@@ -1,3 +1,1 @@
-# Public, community-operated sing-box/V2Ray subscription feed
-# Upstream says it rebuilds hourly and verifies real HTTP traffic before publishing.
-https://github.com/Au1rxx/free-vpn-subscriptions/raw/main/output/v2ray-base64.txt
+# Add only subscription URLs for VPN servers you own or are authorized to use.
