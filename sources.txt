@@ -1,1 +1,3 @@
-# Add only subscription URLs for VPN servers you own or are authorized to use.
+# Public community VPN configs (third-party operated; use at your own risk).
+# Feed format: Base64-encoded V2Ray links; HAWK VPN decodes and imports supported protocols.
+https://raw.githubusercontent.com/Au1rxx/free-vpn-subscriptions/main/output/v2ray-base64.txt
