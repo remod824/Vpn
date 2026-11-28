@@ -381,7 +381,7 @@ object ServerCatalog {
         )
         return countries.firstOrNull { (keys, _) ->
             keys.any { key ->
-                if (key.startsWith("\\\\b")) Regex(key).containsMatchIn(value) else value.contains(key)
+                if (key.startsWith("\\b")) Regex(key).containsMatchIn(value) else value.contains(key)
             }
         }?.second ?: "Unknown"
     }
