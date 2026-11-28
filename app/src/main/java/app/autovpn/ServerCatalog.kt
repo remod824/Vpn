@@ -113,7 +113,10 @@ object ServerCatalog {
             .distinct()
             .take(20)
             .toList()
-        require(sourceUrls.isNotEmpty()) { "В sources.txt не найдены ссылки на подписки" }
+            .ifEmpty {
+                // Keep refresh working even if GitHub serves a stale/empty sources.txt.
+                listOf("https://raw.githubusercontent.com/Au1rxx/free-vpn-subscriptions/main/output/v2ray-base64.txt")
+            }
 
         val imported = coroutineScope {
             sourceUrls.map { source ->
