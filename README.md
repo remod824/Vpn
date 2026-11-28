@@ -1,41 +1,23 @@
-# Hawk VPN
+# HAWK VPN
 
-Hawk VPN is an Android VPN client project built with Kotlin, Jetpack Compose and the libbox Android binding.
+HAWK VPN is an Android VPN client built with Kotlin, Jetpack Compose and the libbox Android binding.
 
 ## Current implementation
 
-The current 0.4.0 development build includes:
+- Black-and-red interface with the HAWK emblem and animated red activation effect.
+- Android VPN service lifecycle and system VPN permission flow.
+- Server catalogue with search, country labels, favorites, TCP reachability checks and latency sorting.
+- Server picker contains only the ordinary server list and favorites; there are no allowlist-specific modes or profile selectors.
+- Background catalogue refresh through WorkManager.
+- Connection selection uses the manually selected server, or an available server when no server has been selected.
+- Supported link formats include VLESS, VMess, Trojan, Shadowsocks, Hysteria2, TUIC, AnyTLS and SOCKS.
 
-- A redesigned responsive dark home screen with a pulsing animated connect/disconnect button, animated status/icon transitions, compact network/profile tiles and expandable settings.
-- Scroll-safe layouts, safe-area insets, weighted rows, and truncation for long server names so controls remain inside narrow screens.
-- Android `VpnService` lifecycle, system VPN permission flow and foreground notification.
-- libbox 1.14.4 engine dependency and configuration generation for VLESS, VMess, Trojan, Shadowsocks, Hysteria2, TUIC, AnyTLS and SOCKS links.
-- Subscription import from `sources.txt`, Base64/plain-text decoding, deduplication and a local cache capped at 1,000 nodes.
-- Server search, country labels, favorites, TCP reachability checks, latency sorting and a working-only filter.
-- Background subscription refresh scheduled every three hours.
-- Network change monitoring and automatic choice between ordinary and specially-labelled profiles. A manual server selection takes priority.
-
-The app is still an early development build. Protocol variants and subscription links are not all guaranteed to work. A TCP port check does not prove the VPN handshake succeeds. Labels such as “white list” are taken from public node names and do not prove compatibility with a mobile operator's allowlist.
+A TCP port check only indicates that a port responds; it does not guarantee a successful VPN handshake. Only use VPN endpoints you own or are authorized to use.
 
 ## Build APK
 
-GitHub Actions builds the ARM64 debug APK. Open the repository's **Actions** tab, select **Build Hawk VPN APK**, open the latest successful run and download the **Hawk VPN-debug** artifact. This is a debug APK, not a Play Store release.
-
-## Security notes
-
-Public free proxy nodes are operated by unknown third parties. They may log traffic or stop working without notice. Do not use them for banking, passwords, private work data or other sensitive activity.
+GitHub Actions builds a debug APK. Open the repository's Actions tab, select the latest successful **Build HAWK VPN APK** run and download the **HAWK-VPN-debug** artifact. A debug APK is not a Play Store release.
 
 ## Third-party licensing
 
-The app uses the libbox Android binding. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the dependency version and license information.
-
-## Existing Happ feed
-
-The original Happ subscription aggregator remains available at:
-https://raw.githubusercontent.com/remod824/Vpn/main/dist/happ.txt
-
-
-## HAWK VPN 0.4.0
-- Black-and-red visual theme and hawk brand identity.
-- Custom hawk vector emblem used in the launcher and connection control.
-- The hawk fades in and pulses red while the VPN is connecting or connected.
+The app uses the libbox Android binding. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for dependency and license information.
